@@ -1,6 +1,3 @@
-export const walkInBathUrl = "https://test-qa.capslock.global/";
-export const walkInBathThankYouPath = "/thankyou";
-
 export const validServiceZip = "68901"; // service available
 export const outOfAreaZip = "11111"; // out-of-area
 export const shortZip = "1234"; // 4 digits — invalid

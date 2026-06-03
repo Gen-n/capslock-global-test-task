@@ -1,4 +1,4 @@
-import { test, expect, devices } from "@playwright/test";
+import { test, expect } from "@playwright/test";
 import { WalkInBathPage } from "../pages/WalkInBathPage";
 import { ThankYouPage } from "../pages/ThankYouPage";
 import { SafetyStatsPage } from "../pages/SafetyStatsPage";
@@ -67,11 +67,15 @@ test.describe("Walk-In Bath Lead Form", () => {
    */
   test("TC02: out-of-area ZIP (11111) shows the sorry step with correct message", async () => {
     await test.step(`Submit out-of-area ZIP: ${outOfAreaZip}`, async () => {
-      await form.submitZip(outOfAreaZip);
+      await form.fillZip(outOfAreaZip);
+      await form.step1SubmitBtn.click();
     });
 
     await test.step("Verify sorry step is shown and form does not advance", async () => {
-      await form.expectSorryStepVisible();
+      await form.waitForStep(form.stepSorry);
+      await expect(form.sorryMessageText).toContainText(
+        /unfortunately we don.t yet install in your area/i
+      );
       await expect(form.step2).not.toBeVisible();
     });
   });
@@ -85,7 +89,7 @@ test.describe("Walk-In Bath Lead Form", () => {
     await test.step(`Submit 4-digit ZIP (${shortZip}) and verify error`, async () => {
       await form.zipInput.fill(shortZip);
       await form.step1SubmitBtn.click();
-      await form.expectZipError();
+      await expect(form.zipErrorBlock).toHaveText("Wrong ZIP code.");
       await expect(form.step2).not.toBeVisible();
       await form.zipInput.clear();
     });
@@ -93,7 +97,7 @@ test.describe("Walk-In Bath Lead Form", () => {
     await test.step(`Submit non-numeric ZIP (${nonNumericZip}) and verify error`, async () => {
       await form.zipInput.fill(nonNumericZip);
       await form.step1SubmitBtn.click();
-      await form.expectZipError();
+      await expect(form.zipErrorBlock).toHaveText("Wrong ZIP code.");
       await expect(form.step2).not.toBeVisible();
     });
   });
@@ -111,7 +115,7 @@ test.describe("Walk-In Bath Lead Form", () => {
     await test.step("Verify blank name is rejected", async () => {
       await form.emailInput.fill(validEmail);
       await form.step4SubmitBtn.click();
-      await form.expectNameError();
+      await expect(form.nameErrorBlock).toHaveText("Please enter your name.");
       await expect(form.step5).not.toBeVisible();
     });
 
@@ -142,7 +146,7 @@ test.describe("Walk-In Bath Lead Form", () => {
     await test.step(`Submit 9-digit phone (${shortPhone}) and verify error`, async () => {
       await form.phoneInput.fill(shortPhone);
       await form.step5SubmitBtn.click();
-      await form.expectPhoneError();
+      await expect(form.phoneErrorBlock).toHaveText("Wrong phone number.");
       await expect(form.page).not.toHaveURL(/\/thankyou/);
     });
   });
@@ -153,12 +157,9 @@ test.describe("Walk-In Bath Lead Form", () => {
 /**
  * TC06 — MOBILE VIEWPORT (Pixel 5)
  * Priority: P2 — the page ships separate mobile video assets and responsive CSS.
+ * Runs exclusively on the mobile-chromium project defined in playwright.config.ts.
  */
 test.describe("Walk-In Bath Lead Form — Mobile (Pixel 5)", () => {
-  // defaultBrowserType cannot be set inside a describe group — omit it
-  const { defaultBrowserType: _browserType, ...pixel5Settings } = devices["Pixel 5"];
-  test.use(pixel5Settings);
-
   test("TC06: happy path on mobile viewport completes and lands on Thank You page", async ({
     page,
   }) => {

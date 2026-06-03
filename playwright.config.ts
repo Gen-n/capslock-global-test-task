@@ -13,6 +13,14 @@ export default defineConfig({
         ...devices["Desktop Chrome"],
         actionTimeout: 30000,
       },
+      grepInvert: /TC06/,
+    },
+    {
+      name: "mobile-chromium",
+      use: {
+        ...devices["Pixel 5"],
+      },
+      grep: /TC06/,
     },
   ],
   reporter: process.env.CI
@@ -32,7 +40,5 @@ export default defineConfig({
     trace: process.env.CI ? "retain-on-failure" : "on",
     video: "on",
   },
-  // fullyParallel (above) gives each test its own worker.
-  // Cap at 3 locally / 4 in CI to avoid hammering the external test site.
   workers: process.env.CI ? 4 : 3,
 });

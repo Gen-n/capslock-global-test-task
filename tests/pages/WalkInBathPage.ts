@@ -1,5 +1,5 @@
-import { type Page, type Locator, expect } from "@playwright/test";
-import { ELEMENT_VISIBILITY_TIMEOUT, FORM_STEP_TRANSITION_TIMEOUT } from "../constants/timeouts";
+import { type Page, type Locator } from "@playwright/test";
+import { FORM_STEP_TRANSITION_TIMEOUT } from "../constants/timeouts";
 
 export class WalkInBathPage {
   readonly page: Page;
@@ -31,6 +31,7 @@ export class WalkInBathPage {
   readonly nameInput: Locator;
   readonly emailInput: Locator;
   readonly step4SubmitBtn: Locator;
+  readonly nameErrorBlock: Locator;
 
   // ─── Step 5: Phone ────────────────────────────────────────────────────────────
   readonly phoneInput: Locator;
@@ -75,6 +76,9 @@ export class WalkInBathPage {
     this.step4SubmitBtn = this.root.locator(
       "form[name='name_and_email'] button[type='submit']"
     );
+    this.nameErrorBlock = this.root
+      .locator("form[name='name_and_email'] [data-error-block]")
+      .first();
 
     this.phoneInput = this.root.locator("[data-phone-input]");
     this.step5SubmitBtn = this.root.locator("form[name='phone'] button[type='submit']");
@@ -99,9 +103,8 @@ export class WalkInBathPage {
 
   // ─── Step helpers ─────────────────────────────────────────────────────────────
 
-  async submitZip(zip: string): Promise<void> {
+  async fillZip(zip: string): Promise<void> {
     await this.zipInput.fill(zip);
-    await this.step1SubmitBtn.click();
   }
 
   async selectInterest(value: string): Promise<void> {
@@ -109,28 +112,18 @@ export class WalkInBathPage {
     await this.step2.locator("label").filter({ hasText: value }).click();
   }
 
-  async submitInterests(): Promise<void> {
-    await this.step2SubmitBtn.click();
-  }
-
   async selectPropertyType(value: string): Promise<void> {
     // Same pattern: radio <input> is CSS-hidden; click its visible <label>
     await this.step3.locator("label").filter({ hasText: value }).click();
   }
 
-  async submitPropertyType(): Promise<void> {
-    await this.step3SubmitBtn.click();
-  }
-
-  async submitNameAndEmail(name: string, email: string): Promise<void> {
+  async fillNameAndEmail(name: string, email: string): Promise<void> {
     await this.nameInput.fill(name);
     await this.emailInput.fill(email);
-    await this.step4SubmitBtn.click();
   }
 
-  async submitPhone(phone: string): Promise<void> {
+  async fillPhone(phone: string): Promise<void> {
     await this.phoneInput.fill(phone);
-    await this.step5SubmitBtn.click();
   }
 
   // ─── Composite flows ──────────────────────────────────────────────────────────
@@ -141,13 +134,14 @@ export class WalkInBathPage {
     interest: string;
     propertyType: string;
   }): Promise<void> {
-    await this.submitZip(data.zip);
+    await this.fillZip(data.zip);
+    await this.step1SubmitBtn.click();
     await this.waitForStep(this.step2);
     await this.selectInterest(data.interest);
-    await this.submitInterests();
+    await this.step2SubmitBtn.click();
     await this.waitForStep(this.step3);
     await this.selectPropertyType(data.propertyType);
-    await this.submitPropertyType();
+    await this.step3SubmitBtn.click();
     await this.waitForStep(this.step4);
   }
 
@@ -160,7 +154,8 @@ export class WalkInBathPage {
     email: string;
   }): Promise<void> {
     await this.navigateToStep4(data);
-    await this.submitNameAndEmail(data.name, data.email);
+    await this.fillNameAndEmail(data.name, data.email);
+    await this.step4SubmitBtn.click();
     await this.waitForStep(this.step5);
   }
 
@@ -174,32 +169,7 @@ export class WalkInBathPage {
     phone: string;
   }): Promise<void> {
     await this.navigateToStep5(data);
-    await this.submitPhone(data.phone);
-  }
-
-  // ─── Assertions ───────────────────────────────────────────────────────────────
-
-  async expectSorryStepVisible(): Promise<void> {
-    await this.waitForStep(this.stepSorry);
-    await expect(this.stepSorry).toBeVisible({ timeout: ELEMENT_VISIBILITY_TIMEOUT });
-    await expect(this.sorryMessageText).toContainText(
-      /unfortunately we don.t yet install in your area/,
-      { timeout: ELEMENT_VISIBILITY_TIMEOUT }
-    );
-  }
-
-  async expectZipError(): Promise<void> {
-    await expect(this.zipErrorBlock).not.toBeEmpty({ timeout: ELEMENT_VISIBILITY_TIMEOUT });
-  }
-
-  async expectPhoneError(): Promise<void> {
-    await expect(this.phoneErrorBlock).not.toBeEmpty({ timeout: ELEMENT_VISIBILITY_TIMEOUT });
-  }
-
-  async expectNameError(): Promise<void> {
-    const nameError = this.root
-      .locator("form[name='name_and_email'] [data-error-block]")
-      .first();
-    await expect(nameError).not.toBeEmpty({ timeout: ELEMENT_VISIBILITY_TIMEOUT });
+    await this.fillPhone(data.phone);
+    await this.step5SubmitBtn.click();
   }
 }
